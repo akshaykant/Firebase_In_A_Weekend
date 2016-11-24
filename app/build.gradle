@@ -40,4 +40,10 @@ dependencies {
 
     // Displaying images
     compile 'com.github.bumptech.glide:glide:3.6.1'
+
+    //Firebase Realtime database
+    compile 'com.google.firebase:firebase-database:9.6.1'
 }
+//Add at the bottom
+//Google Servie Plugin is what reads the configuration information for the google_services.json file
+apply plugin: 'com.google.gms.google-services'

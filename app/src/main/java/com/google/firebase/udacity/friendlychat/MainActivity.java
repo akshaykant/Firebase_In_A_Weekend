@@ -30,6 +30,9 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,12 +52,28 @@ public class MainActivity extends AppCompatActivity {
 
     private String mUsername;
 
+
+    /*Two classes from Firebase Database API.*/
+    //Firebase database object is the entry point for our app to access the database.
+    private FirebaseDatabase mFirebaseDatabase;
+    //Database Reference object is a class that reference a specific part of the database.
+    // This will be referencing the messaging portion of our database.
+    private DatabaseReference mMessageDatabaseReference;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         mUsername = ANONYMOUS;
+
+        /*instantiate the two firebase database object*/
+        //getting instance to the firebase database
+        mFirebaseDatabase = FirebaseDatabase.getInstance();
+        //getting reference to the specific part of the database.
+        // getReference() will get the reference to the root, while child() will refer to the specific part i.e. "messages"
+        mMessageDatabaseReference = mFirebaseDatabase.getReference().child("messages");
+
 
         // Initialize references to views
         mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
