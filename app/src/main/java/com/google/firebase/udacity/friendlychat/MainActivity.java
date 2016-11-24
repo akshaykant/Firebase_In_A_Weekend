@@ -16,6 +16,7 @@
 package com.google.firebase.udacity.friendlychat;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -29,7 +30,11 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
+import com.firebase.ui.auth.AuthUI;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -37,11 +42,10 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import static android.R.attr.data;
-import static android.R.attr.y;
-import static android.os.Build.ID;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String ANONYMOUS = "anonymous";
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
+
+    //Set the value RC_SIGN_IN flag used for startActivityForResult for FirebaseUI and don't use the default value.
+    private static final int RC_SIGN_IN = 1;
 
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
@@ -70,6 +77,13 @@ public class MainActivity extends AppCompatActivity {
     /*Event listener that reacts to the Firebase database changes in the real-time.*/
     private ChildEventListener mChildEventListener;
 
+    /*One class from Firebase Auth API*/
+    private FirebaseAuth mFirebaseAuth;
+
+    /*Event Listener that reacts to auth state change. It execute when user signs in, signs out, attached  to FriebaseAuth*/
+    // Best Practices: attach AuthStateListener in onResume() and detach in onPause()
+    private FirebaseAuth.AuthStateListener mAuthStateListener;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -83,6 +97,9 @@ public class MainActivity extends AppCompatActivity {
         //getting reference to the specific part of the database.
         // getReference() will get the reference to the root, while child() will refer to the specific part i.e. "messages"
         mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("messages");
+
+        /*Instantiate the firebase auth object*/
+        mFirebaseAuth = FirebaseAuth.getInstance();
 
 
         // Initialize references to views
@@ -197,6 +214,36 @@ public class MainActivity extends AppCompatActivity {
         /*Add the listener to the database reference.*/
         //This will trigger when one of the node of messages changes.
         mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
+
+        /*Instantiate new AuthStateListener*/
+        //Attach and detach in onResume() and onPause()
+        mAuthStateListener = new FirebaseAuth.AuthStateListener() {
+            @Override
+            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+
+                //Check the state of the user
+               FirebaseUser user = firebaseAuth.getCurrentUser();
+                if(user != null){
+                    // user is signed in
+                    Toast.makeText(MainActivity.this, "SIGNED IN", Toast.LENGTH_LONG).show();
+
+                }
+                else {
+                    // user is signed out
+                    //Show the Sign In Screen
+                    startActivityForResult(
+                            AuthUI.getInstance()
+                                    .createSignInIntentBuilder()
+                                    .setIsSmartLockEnabled(false)
+                                    .setProviders(
+                                            AuthUI.EMAIL_PROVIDER,
+                                            AuthUI.GOOGLE_PROVIDER
+                                            )
+                                    .build(),
+                            RC_SIGN_IN);
+                }
+            }
+        };
     }
 
     @Override
@@ -210,4 +257,20 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        //attach AuthStateListener in onResume()
+        mFirebaseAuth.addAuthStateListener(mAuthStateListener);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        //detach AuthStateListener in onPause()
+        mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
+    }
+
+
 }

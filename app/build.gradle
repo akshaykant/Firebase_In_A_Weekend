@@ -43,6 +43,13 @@ dependencies {
 
     //Firebase Realtime database
     compile 'com.google.firebase:firebase-database:9.6.1'
+
+    //Firebase Authentication
+    compile 'com.google.firebase:firebase-auth:9.6.1'
+
+    //FirebaseUI
+    //Check the version as it is mapped to the firebase-auth version
+    compile 'com.firebaseui:firebase-ui-auth:0.6.1'
 }
 //Add at the bottom
 //Google Servie Plugin is what reads the configuration information for the google_services.json file
