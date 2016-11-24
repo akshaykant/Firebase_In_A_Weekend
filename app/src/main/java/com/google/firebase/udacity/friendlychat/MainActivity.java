@@ -30,12 +30,17 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.R.attr.data;
+import static android.R.attr.y;
 import static android.os.Build.ID;
 
 public class MainActivity extends AppCompatActivity {
@@ -61,6 +66,9 @@ public class MainActivity extends AppCompatActivity {
     //Database Reference object is a class that reference a specific part of the database.
     // This will be referencing the messaging portion of our database.
     private DatabaseReference mMessagesDatabaseReference;
+
+    /*Event listener that reacts to the Firebase database changes in the real-time.*/
+    private ChildEventListener mChildEventListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,6 +149,54 @@ public class MainActivity extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
+
+        /*Instantiate new ChildEventListener*/
+        mChildEventListener = new ChildEventListener() {
+            //This method is called whenever a new child is inserted into the messages list.
+            //Importantly, it is also triggered for every child message in the list when the listener is attached.
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+
+                /*DataSnapshot contains data from the firebase database at the specific location
+                  at the exact time the listener is triggered*/
+                //In this case, dataSnapshot will always contain the messag that has been added.
+                //The getValue() method can take a parameter which is a class by passing this parameter
+                //the code will deserialize the message from the database into our FriendlyMessage object.
+                FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
+                //add the FriendlyMessage object to our adapter.
+                mMessageAdapter.add(friendlyMessage);
+
+            }
+
+            //This is called when the content of the existing message gets changed.
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            //This method is called when an existing message is deleted.
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+            }
+
+            //This method is called when whatever message changed position in the list.
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            //This method indicate that some sort of error occurred when you're trying to make changes.
+            //Typically this means that you don't have permission to read it.
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        };
+
+        /*Add the listener to the database reference.*/
+        //This will trigger when one of the node of messages changes.
+        mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
     }
 
     @Override
