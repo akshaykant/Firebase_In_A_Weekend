@@ -15,6 +15,7 @@
  */
 package com.google.firebase.udacity.friendlychat;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -42,9 +43,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
 
 
 public class MainActivity extends AppCompatActivity {
@@ -167,53 +166,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /*Instantiate new ChildEventListener*/
-        mChildEventListener = new ChildEventListener() {
-            //This method is called whenever a new child is inserted into the messages list.
-            //Importantly, it is also triggered for every child message in the list when the listener is attached.
-            @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-
-                /*DataSnapshot contains data from the firebase database at the specific location
-                  at the exact time the listener is triggered*/
-                //In this case, dataSnapshot will always contain the messag that has been added.
-                //The getValue() method can take a parameter which is a class by passing this parameter
-                //the code will deserialize the message from the database into our FriendlyMessage object.
-                FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
-                //add the FriendlyMessage object to our adapter.
-                mMessageAdapter.add(friendlyMessage);
-
-            }
-
-            //This is called when the content of the existing message gets changed.
-            @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-
-            }
-
-            //This method is called when an existing message is deleted.
-            @Override
-            public void onChildRemoved(DataSnapshot dataSnapshot) {
-
-            }
-
-            //This method is called when whatever message changed position in the list.
-            @Override
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-
-            }
-
-            //This method indicate that some sort of error occurred when you're trying to make changes.
-            //Typically this means that you don't have permission to read it.
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        };
-
-        /*Add the listener to the database reference.*/
-        //This will trigger when one of the node of messages changes.
-        mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
 
         /*Instantiate new AuthStateListener*/
         //Attach and detach in onResume() and onPause()
@@ -222,14 +174,15 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
 
                 //Check the state of the user
-               FirebaseUser user = firebaseAuth.getCurrentUser();
-                if(user != null){
+                FirebaseUser user = firebaseAuth.getCurrentUser();
+                if (user != null) {
                     // user is signed in
-                    Toast.makeText(MainActivity.this, "SIGNED IN", Toast.LENGTH_LONG).show();
+                    onSignedInInitialize(user.getDisplayName());
 
-                }
-                else {
+                } else {
                     // user is signed out
+                    onSignedOutCleanup();
+
                     //Show the Sign In Screen
                     startActivityForResult(
                             AuthUI.getInstance()
@@ -238,12 +191,110 @@ public class MainActivity extends AppCompatActivity {
                                     .setProviders(
                                             AuthUI.EMAIL_PROVIDER,
                                             AuthUI.GOOGLE_PROVIDER
-                                            )
+                                    )
                                     .build(),
                             RC_SIGN_IN);
                 }
             }
         };
+    }
+
+    /*startActivityForResult() return onAcivityResult() with RESULT_OK or RESULT_CANCEL.
+    Here you can handle the back button pressed flow from the login page.*/
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == RC_SIGN_IN) {
+            if (resultCode == RESULT_OK) {
+                Toast.makeText(MainActivity.this, "Signed in!", Toast.LENGTH_LONG).show();
+            } else if (resultCode == RESULT_CANCELED) {
+                Toast.makeText(MainActivity.this, "Sign in Cancelled!", Toast.LENGTH_LONG).show();
+                finish();
+            }
+        }
+    }
+
+    private void onSignedInInitialize(String username) {
+        mUsername = username;
+
+        //User will be able to get access to the database once successfully logged in.
+        attachDatabaseReadListener();
+
+    }
+
+    private void onSignedOutCleanup() {
+
+        //Unset the Username
+        mUsername = ANONYMOUS;
+
+        //unset the Adapter
+        mMessageAdapter.clear();
+
+        //detach the read listener
+        detachDatabaseReadListener();
+
+    }
+
+    private void attachDatabaseReadListener() {
+
+        //if listener is null, then only attach it
+        if (mChildEventListener == null) {
+        /*Instantiate new ChildEventListener*/
+            mChildEventListener = new ChildEventListener() {
+                //This method is called whenever a new child is inserted into the messages list.
+                //Importantly, it is also triggered for every child message in the list when the listener is attached.
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+
+                /*DataSnapshot contains data from the firebase database at the specific location
+                  at the exact time the listener is triggered*/
+                    //In this case, dataSnapshot will always contain the messag that has been added.
+                    //The getValue() method can take a parameter which is a class by passing this parameter
+                    //the code will deserialize the message from the database into our FriendlyMessage object.
+                    FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
+                    //add the FriendlyMessage object to our adapter.
+                    mMessageAdapter.add(friendlyMessage);
+
+                }
+
+                //This is called when the content of the existing message gets changed.
+                @Override
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+                }
+
+                //This method is called when an existing message is deleted.
+                @Override
+                public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+                }
+
+                //This method is called when whatever message changed position in the list.
+                @Override
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                }
+
+                //This method indicate that some sort of error occurred when you're trying to make changes.
+                //Typically this means that you don't have permission to read it.
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            };
+
+        /*Add the listener to the database reference.*/
+            //This will trigger when one of the node of messages changes.
+            mMessagesDatabaseReference.addChildEventListener(mChildEventListener);
+        }
+    }
+
+    private void detachDatabaseReadListener() {
+        //If listener is not null then only detach it
+        if (mChildEventListener != null) {
+            mMessagesDatabaseReference.removeEventListener(mChildEventListener);
+            mChildEventListener = null;
+        }
     }
 
     @Override
@@ -255,7 +306,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        return super.onOptionsItemSelected(item);
+        switch (item.getItemId()) {
+            case R.id.sign_out_menu:
+                //sign out
+                AuthUI.getInstance().signOut(this);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+
     }
 
     @Override
@@ -269,7 +328,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         //detach AuthStateListener in onPause()
-        mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
+        if (mAuthStateListener != null) {
+            mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
+        }
+
+        //When the activity is destroyed, the listener will also be cleaned up.
+        detachDatabaseReadListener();
+        mMessageAdapter.clear();
     }
 
 
