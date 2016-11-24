@@ -36,6 +36,8 @@ import com.google.firebase.database.FirebaseDatabase;
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.os.Build.ID;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
@@ -58,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseDatabase mFirebaseDatabase;
     //Database Reference object is a class that reference a specific part of the database.
     // This will be referencing the messaging portion of our database.
-    private DatabaseReference mMessageDatabaseReference;
+    private DatabaseReference mMessagesDatabaseReference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
         mFirebaseDatabase = FirebaseDatabase.getInstance();
         //getting reference to the specific part of the database.
         // getReference() will get the reference to the root, while child() will refer to the specific part i.e. "messages"
-        mMessageDatabaseReference = mFirebaseDatabase.getReference().child("messages");
+        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("messages");
 
 
         // Initialize references to views
@@ -123,7 +125,17 @@ public class MainActivity extends AppCompatActivity {
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // TODO: Send messages on click
+
+                //create a FriendlyMessage object for the message that the user typed in
+                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null);
+
+                /*A push ID contains 120 bits of information.
+                The first 48 bits are a timestamp, which both reduces the chance of collision
+                and allows consecutively created push IDs to sort chronologically.
+                The timestamp is followed by 72 bits of randomness,
+                which ensures that even two people creating push IDs at the exact same millisecond
+                are extremely unlikely to generate identical IDs.*/
+                mMessagesDatabaseReference.push().setValue(friendlyMessage);
 
                 // Clear input box
                 mMessageEditText.setText("");
