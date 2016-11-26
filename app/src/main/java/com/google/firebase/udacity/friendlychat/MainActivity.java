@@ -16,6 +16,7 @@
 package com.google.firebase.udacity.friendlychat;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -34,6 +35,7 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
@@ -41,6 +43,9 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int RC_SIGN_IN = 1;
 
     //Set the value RC_PHOTO_PICKER flag used for startActivityForResult for Photo Picker Button
-    private static final int RC_PHOTO_PICKER =  2;
+    private static final int RC_PHOTO_PICKER = 2;
 
     private ListView mMessageListView;
     private MessageAdapter mMessageAdapter;
@@ -82,6 +87,13 @@ public class MainActivity extends AppCompatActivity {
     /*One class from Firebase Auth API*/
     private FirebaseAuth mFirebaseAuth;
 
+    /*Two Classes from Firebase Storage API*/
+    private FirebaseStorage mFirebaseStorage;
+    //Storage Reference object is a class that reference a specific part of the storage.
+    //This will be referencing the chat_photos portion of our storage.
+    private StorageReference mChatPhotoStorageReference;
+
+
     /*Event Listener that reacts to auth state change. It execute when user signs in, signs out, attached  to FriebaseAuth*/
     // Best Practices: attach AuthStateListener in onResume() and detach in onPause()
     private FirebaseAuth.AuthStateListener mAuthStateListener;
@@ -102,6 +114,13 @@ public class MainActivity extends AppCompatActivity {
 
         /*Instantiate the firebase auth object*/
         mFirebaseAuth = FirebaseAuth.getInstance();
+
+        /*Instantiate the two firebase storage object*/
+        //getting instance to the firebase storage
+        mFirebaseStorage = FirebaseStorage.getInstance();
+        //getting reference to the specific part of the storage.
+        // getReference() will get the reference to the root, while child() will refer to the specific part i.e. "chat_photos"
+        mChatPhotoStorageReference = mFirebaseStorage.getReference().child("chat_photos");
 
 
         // Initialize references to views
@@ -220,7 +239,29 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
         }
+        //For Photo Picker : select the photo and send it to the Firebase Storage
+        else if (requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK) {
+            //The Selected image will come as a URI
+            Uri selectedImageUri = data.getData();
+            //Get a reference to store file at chat_photos/<FILENAME>
+            //<FILENAME> eg: content://local_images/foo/4 -> last path is 4
+            StorageReference photoRef = mChatPhotoStorageReference.child(selectedImageUri.getLastPathSegment());
+
+            //Upload photo to the Firebase Storage
+            photoRef.putFile(selectedImageUri).addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    //taskSnapshot is the key to get the URL of the image
+                    Uri downloadUrl = taskSnapshot.getDownloadUrl();
+                    //Create the friendlyMessage object
+                    FriendlyMessage friendlyMessage = new FriendlyMessage(null, mUsername, downloadUrl.toString());
+                    //Store it in the database.
+                    mMessagesDatabaseReference.push().setValue(friendlyMessage);
+                }
+            });
+        }
     }
+
 
     private void onSignedInInitialize(String username) {
         mUsername = username;

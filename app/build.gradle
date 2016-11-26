@@ -50,6 +50,9 @@ dependencies {
     //FirebaseUI
     //Check the version as it is mapped to the firebase-auth version
     compile 'com.firebaseui:firebase-ui-auth:0.6.1'
+
+    //Firebase Storage
+    compile 'com.google.firebase:firebase-storage:9.6.1'
 }
 //Add at the bottom
 //Google Servie Plugin is what reads the configuration information for the google_services.json file
