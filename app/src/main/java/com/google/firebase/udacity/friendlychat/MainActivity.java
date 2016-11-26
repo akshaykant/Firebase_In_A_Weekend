@@ -43,12 +43,16 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -57,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String ANONYMOUS = "anonymous";
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
+    public static final String FRIENDLY_MSG_LENGTH_KEY = "friendly_msg_length";
 
     //Set the value RC_SIGN_IN flag used for startActivityForResult for FirebaseUI and don't use the default value.
     private static final int RC_SIGN_IN = 1;
@@ -93,6 +98,9 @@ public class MainActivity extends AppCompatActivity {
     //This will be referencing the chat_photos portion of our storage.
     private StorageReference mChatPhotoStorageReference;
 
+    /*One class from Firebase Remote Config*/
+    private FirebaseRemoteConfig mFirebaseRemoteConfig;
+
 
     /*Event Listener that reacts to auth state change. It execute when user signs in, signs out, attached  to FriebaseAuth*/
     // Best Practices: attach AuthStateListener in onResume() and detach in onPause()
@@ -121,6 +129,9 @@ public class MainActivity extends AppCompatActivity {
         //getting reference to the specific part of the storage.
         // getReference() will get the reference to the root, while child() will refer to the specific part i.e. "chat_photos"
         mChatPhotoStorageReference = mFirebaseStorage.getReference().child("chat_photos");
+
+        /*Instantiate the firebase remote config object*/
+        mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
 
 
         // Initialize references to views
@@ -224,6 +235,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         };
+
+        // Create Remote Config Setting to enable developer mode.
+        // Fetching configs from the server is normally limited to 5 requests per hour.
+        // Enabling developer mode allows many more requests to be made per hour, so developers
+        // can test different config values during development.
+        //Also, Change DEBUG to RELEASE mode at the time of RELEASE BUILD.
+        FirebaseRemoteConfigSettings configSettings = new FirebaseRemoteConfigSettings.Builder()
+                .setDeveloperModeEnabled(BuildConfig.DEBUG)
+                .build();
+
+        // Define default config values. Defaults are used when fetched config values are not
+        // available. Eg: if an error occurred fetching values from the server.
+        Map<String, Object> defaultConfigMap = new HashMap<>();
+        defaultConfigMap.put(FRIENDLY_MSG_LENGTH_KEY, DEFAULT_MSG_LENGTH_LIMIT);
+        mFirebaseRemoteConfig.setDefaults(defaultConfigMap);
     }
 
     /*startActivityForResult() return onAcivityResult() with RESULT_OK or RESULT_CANCEL.
